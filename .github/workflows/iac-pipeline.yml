@@ -25,7 +25,6 @@ env:
 
 jobs:
 
-  # CM-3: Manual approval gate before any plan runs
   request-approval:
     name: Request Approval
     runs-on: ubuntu-latest
@@ -34,7 +33,6 @@ jobs:
       - name: Approval granted
         run: echo "Approved - proceeding to Terraform plan"
 
-  # RA-5: Scan Terraform for misconfigurations
   security-scan:
     name: Security Scan
     runs-on: ubuntu-latest
@@ -42,13 +40,11 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-
       - name: Run tfsec
         uses: aquasecurity/tfsec-action@v1.0.0
         with:
           soft_fail: true
 
-  # Terraform plan for DEV environment
   plan-dev:
     name: Plan DEV
     runs-on: ubuntu-latest
@@ -59,6 +55,14 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
+      - name: Debug OIDC Context
+        run: |
+          echo "Repository: ${{ github.repository }}"
+          echo "Ref: ${{ github.ref }}"
+          echo "Event: ${{ github.event_name }}"
+          echo "Actor: ${{ github.actor }}"
+          echo "SHA: ${{ github.sha }}"
 
       - name: Configure AWS Credentials OIDC
         uses: aws-actions/configure-aws-credentials@v4
@@ -99,7 +103,6 @@ jobs:
               body: '## Terraform Plan - DEV\n```\n' + truncated + '\n```'
             });
 
-  # Terraform plan for STAGING (plan only - never apply)
   plan-staging:
     name: Plan STAGING
     runs-on: ubuntu-latest
@@ -149,7 +152,6 @@ jobs:
               body: '## Terraform Plan - STAGING (plan only - never apply)\n```\n' + truncated + '\n```'
             });
 
-  # CM-3: Second approval gate before apply
   approve-apply:
     name: Approve Apply
     runs-on: ubuntu-latest
@@ -160,7 +162,6 @@ jobs:
       - name: Apply approved
         run: echo "Apply approved - proceeding to terraform apply"
 
-  # Terraform apply DEV only
   apply-dev:
     name: Apply DEV
     runs-on: ubuntu-latest
@@ -190,7 +191,6 @@ jobs:
       - name: Terraform Apply
         run: terraform apply -auto-approve
 
-  # CA-7: Nightly drift detection
   drift-detection:
     name: Drift Detection
     runs-on: ubuntu-latest
