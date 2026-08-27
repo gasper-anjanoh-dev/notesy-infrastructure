@@ -54,3 +54,9 @@ variable "aws_region" {
   type    = string
   default = "us-east-1"
 }
+
+variable "alb_listener_arn" {
+  description = "ARN of the ALB listener to depend on"
+  type        = string
+  default     = ""
+}
