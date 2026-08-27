@@ -97,6 +97,16 @@ resource "aws_ecs_task_definition" "app" {
       containerPort = var.app_port
       protocol      = "tcp"
     }]
+    environment = [
+      {
+        name  = "CSRF_TRUSTED_ORIGINS"
+        value = "https://d29xdiu2w69t4k.cloudfront.net"
+      },
+      {
+        name  = "DJANGO_ALLOWED_HOSTS"
+        value = "d29xdiu2w69t4k.cloudfront.net,localhost,127.0.0.1"
+      }
+    ]
     logConfiguration = {
       logDriver = "awslogs"
       options = {
@@ -133,6 +143,8 @@ resource "aws_ecs_service" "app" {
     container_name   = var.project_name
     container_port   = var.app_port
   }
+
+  depends_on = [var.alb_listener_arn]
 
   tags = {
     Environment = var.environment
