@@ -240,3 +240,14 @@ Expensive resources to watch:
 - NAT Gateway approximately 1 dollar per day
 - ALB approximately 0.60 dollars per day
 - ECS tasks approximately 0.04 dollars per hour per vCPU
+
+## Deployed (dev)
+
+The `dev` environment is deployed in AWS (us-east-1) for testing. You can reach the application through the CloudFront distribution which fronts the ALB.
+
+- CloudFront URL: https://d2ficd3btkmau8.cloudfront.net
+- ALB DNS name: notesy-dev-alb-1393659005.us-east-1.elb.amazonaws.com
+
+If you see a 302 redirect to `/login/?next=/` that indicates the Django app is running and redirecting unauthenticated requests to the login page.
+
+Note: `staging` is configured for plan-only validation and is not automatically applied in this repository.
