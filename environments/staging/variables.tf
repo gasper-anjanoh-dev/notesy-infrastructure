@@ -31,7 +31,7 @@ variable "allocated_storage" {
 variable "backup_retention" {
   description = "RDS backup retention days"
   type        = number
-  default     = 7
+  default     = 1
 }
 
 variable "kms_key_id" {
