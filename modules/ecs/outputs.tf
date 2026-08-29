@@ -13,3 +13,8 @@ output "service_name" {
 output "task_definition_arn" {
   value = aws_ecs_task_definition.app.arn
 }
+
+output "ecs_security_group_id" {
+  description = "Security group ID for ECS tasks"
+  value       = aws_security_group.ecs_tasks.id
+}

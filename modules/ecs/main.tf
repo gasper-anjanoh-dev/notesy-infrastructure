@@ -107,6 +107,16 @@ resource "aws_ecs_task_definition" "app" {
         value = "d29xdiu2w69t4k.cloudfront.net,localhost,127.0.0.1"
       }
     ]
+    secrets = [
+      {
+        name = "DATABASE_URL"
+        valueFrom = var.db_secret_arn
+      },
+      {
+        name = "REDIS_URL"
+        valueFrom = var.redis_secret_arn
+      }
+    ]
     logConfiguration = {
       logDriver = "awslogs"
       options = {
@@ -143,6 +153,9 @@ resource "aws_ecs_service" "app" {
     container_name   = var.project_name
     container_port   = var.app_port
   }
+
+  deployment_minimum_healthy_percent = 100
+  deployment_maximum_percent = 200
 
   depends_on = [var.alb_listener_arn]
 
