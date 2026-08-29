@@ -32,6 +32,7 @@ module "rds" {
   kms_key_id         = var.kms_key_id
   multi_az           = true
   tags               = var.tags
+  ecs_security_group_id = module.ecs.ecs_security_group_id
 }
 
 module "redis" {
@@ -43,6 +44,7 @@ module "redis" {
   engine_version     = var.redis_engine_version
   auth_token         = var.redis_auth_token
   tags               = var.tags
+  ecs_security_group_id = module.ecs.ecs_security_group_id
 }
 
 module "ecs" {
