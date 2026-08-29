@@ -81,6 +81,14 @@ resource "aws_security_group" "ecs_tasks" {
   }
 }
 
+# Build container secrets list only when ARNs provided
+locals {
+  container_secrets = concat(
+    var.db_secret_arn != "" ? [ { name = "DATABASE_URL", valueFrom = var.db_secret_arn } ] : [],
+    var.redis_secret_arn != "" ? [ { name = "REDIS_URL", valueFrom = var.redis_secret_arn } ] : []
+  )
+}
+
 # ECS Task Definition
 resource "aws_ecs_task_definition" "app" {
   family                   = "${var.project_name}-${var.environment}"
@@ -89,13 +97,6 @@ resource "aws_ecs_task_definition" "app" {
   cpu                      = var.cpu
   memory                   = var.memory
   execution_role_arn       = aws_iam_role.ecs_task_execution.arn
-
-  locals {
-    container_secrets = concat(
-      var.db_secret_arn != "" ? [ { name = "DATABASE_URL", valueFrom = var.db_secret_arn } ] : [],
-      var.redis_secret_arn != "" ? [ { name = "REDIS_URL", valueFrom = var.redis_secret_arn } ] : []
-    )
-  }
 
   container_definitions = jsonencode([{
     name  = var.project_name
