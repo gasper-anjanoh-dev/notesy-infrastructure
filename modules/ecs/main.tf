@@ -90,6 +90,13 @@ resource "aws_ecs_task_definition" "app" {
   memory                   = var.memory
   execution_role_arn       = aws_iam_role.ecs_task_execution.arn
 
+  locals {
+    container_secrets = concat(
+      var.db_secret_arn != "" ? [ { name = "DATABASE_URL", valueFrom = var.db_secret_arn } ] : [],
+      var.redis_secret_arn != "" ? [ { name = "REDIS_URL", valueFrom = var.redis_secret_arn } ] : []
+    )
+  }
+
   container_definitions = jsonencode([{
     name  = var.project_name
     image = var.app_image
@@ -107,16 +114,7 @@ resource "aws_ecs_task_definition" "app" {
         value = "d29xdiu2w69t4k.cloudfront.net,localhost,127.0.0.1"
       }
     ]
-    secrets = [
-      {
-        name = "DATABASE_URL"
-        valueFrom = var.db_secret_arn
-      },
-      {
-        name = "REDIS_URL"
-        valueFrom = var.redis_secret_arn
-      }
-    ]
+    secrets = local.container_secrets
     logConfiguration = {
       logDriver = "awslogs"
       options = {

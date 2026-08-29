@@ -1,7 +1,7 @@
 resource "aws_cloudfront_distribution" "main" {
   enabled         = true
   is_ipv6_enabled = true
-  web_acl_id      = var.waf_acl_arn
+  web_acl_id      = var.waf_acl_arn != "" ? var.waf_acl_arn : null
   comment         = "${var.project_name}-${var.environment}"
 
   origin {
