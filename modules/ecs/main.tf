@@ -85,7 +85,8 @@ resource "aws_security_group" "ecs_tasks" {
 locals {
   container_secrets = concat(
     var.db_secret_arn != "" ? [ { name = "DATABASE_URL", valueFrom = var.db_secret_arn } ] : [],
-    var.redis_secret_arn != "" ? [ { name = "REDIS_URL", valueFrom = var.redis_secret_arn } ] : []
+    var.redis_secret_arn != "" ? [ { name = "REDIS_URL", valueFrom = var.redis_secret_arn } ] : [],
+    var.django_secret_arn != "" ? [ { name = "DJANGO_SECRET_KEY", valueFrom = var.django_secret_arn } ] : []
   )
 }
 
@@ -108,11 +109,11 @@ resource "aws_ecs_task_definition" "app" {
     environment = [
       {
         name  = "CSRF_TRUSTED_ORIGINS"
-        value = "https://d29xdiu2w69t4k.cloudfront.net"
+        value = var.cloudfront_domain != "" ? "https://${var.cloudfront_domain}" : ""
       },
       {
         name  = "DJANGO_ALLOWED_HOSTS"
-        value = "d29xdiu2w69t4k.cloudfront.net,localhost,127.0.0.1"
+        value = join(",", [for h in [var.cloudfront_domain, var.alb_dns_name, "localhost", "127.0.0.1"] : h if h != ""]) 
       }
     ]
     secrets = local.container_secrets

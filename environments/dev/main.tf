@@ -61,6 +61,9 @@ module "ecs" {
   app_image             = var.app_image
   db_secret_arn         = module.rds.db_secret_arn
   redis_secret_arn      = module.redis.redis_secret_arn
+  cloudfront_domain     = module.cdn.cloudfront_domain_name
+  alb_dns_name          = module.alb.alb_dns_name
+  desired_count         = 2
 }
 
 module "cdn" {

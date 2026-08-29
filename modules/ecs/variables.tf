@@ -72,3 +72,21 @@ variable "redis_secret_arn" {
   type        = string
   default     = ""
 }
+
+variable "cloudfront_domain" {
+  description = "CloudFront distribution domain name (e.g. dxxxxx.cloudfront.net)"
+  type        = string
+  default     = ""
+}
+
+variable "django_secret_arn" {
+  description = "ARN of the Secrets Manager secret containing Django SECRET_KEY"
+  type        = string
+  default     = ""
+}
+
+variable "alb_dns_name" {
+  description = "DNS name of the ALB (used to populate allowed hosts)"
+  type        = string
+  default     = ""
+}
