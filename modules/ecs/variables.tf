@@ -60,3 +60,15 @@ variable "alb_listener_arn" {
   type        = string
   default     = ""
 }
+
+variable "db_secret_arn" {
+  description = "ARN of the Secrets Manager secret containing DB credentials"
+  type        = string
+  default     = ""
+}
+
+variable "redis_secret_arn" {
+  description = "ARN of the Secrets Manager secret containing Redis connection info"
+  type        = string
+  default     = ""
+}
