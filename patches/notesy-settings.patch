@@ -1,0 +1,27 @@
+*** Begin Patch
+*** Update File: notesy/settings.py
+@@
+-import os
+-
+-# Build paths inside the project like this: BASE_DIR / 'subdir'.
+-from pathlib import Path
++import os
++
++# Build paths inside the project like this: BASE_DIR / 'subdir'.
++from pathlib import Path
+@@
+-ALLOWED_HOSTS = []
++def _split_env_list(varname: str, default: str = ""):
++    """Return a list of non-empty, stripped values from a comma-separated env var."""
++    return [s.strip() for s in os.environ.get(varname, default).split(",") if s.strip()]
++
++
++# Allow hosts and CSRF trusted origins configured from environment for production.
++# Example: set `DJANGO_ALLOWED_HOSTS=example.com,www.example.com` and
++# `CSRF_TRUSTED_ORIGINS=https://example.com,https://www.example.com`
++ALLOWED_HOSTS = _split_env_list("DJANGO_ALLOWED_HOSTS") or ["localhost"]
++
++# CSRF_TRUSTED_ORIGINS expects full origins (including scheme). Read from env.
++CSRF_TRUSTED_ORIGINS = _split_env_list("CSRF_TRUSTED_ORIGINS")
+-
+*** End Patch

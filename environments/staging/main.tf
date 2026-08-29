@@ -35,5 +35,6 @@ module "cdn" {
   project_name = "notesy"
   environment  = "staging"
   alb_dns_name = module.alb.alb_dns_name
-  waf_acl_arn  = module.waf.web_acl_arn
+  # Don't attach the regional WAF to CloudFront (CloudFront requires global WAF)
+  waf_acl_arn  = ""
 }

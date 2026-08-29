@@ -55,3 +55,9 @@ variable "tags" {
   type        = map(string)
   default     = {}
 }
+
+variable "aws_region" {
+  description = "AWS region for dashboard widgets"
+  type        = string
+  default     = "us-east-1"
+}

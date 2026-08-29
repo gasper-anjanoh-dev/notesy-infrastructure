@@ -5,14 +5,16 @@ on:
     branches:
       - main
     paths:
-      - 'environments/**'
+      - 'environments/dev/**'
       - 'modules/**'
   push:
     branches:
       - main
     paths:
-      - 'environments/**'
+      - 'environments/dev/**'
       - 'modules/**'
+  schedule:
+    - cron: '0 6 * * *'
 
 permissions:
   contents: read
@@ -203,7 +205,6 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-
       - name: Configure AWS Credentials OIDC
         uses: aws-actions/configure-aws-credentials@v4
         with:
@@ -213,9 +214,28 @@ jobs:
 
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
 
       - name: Terraform Init
         run: terraform init
 
+      - name: Detect Drift (dev) - fail on drift
+        id: detect-drift
+        run: |
+          set -o pipefail
+          terraform plan -detailed-exitcode -no-color | tee plan-drift.txt
+          rc=$?
+          if [ "$rc" -eq 2 ]; then
+            echo "Drift detected in dev environment" >&2
+            cat plan-drift.txt >&2
+            exit 2
+          elif [ "$rc" -ne 0 ]; then
+            echo "Terraform plan failed with exit code $rc" >&2
+            cat plan-drift.txt >&2
+            exit $rc
+          else
+            echo "No drift detected"
+          fi
       - name: Detect Drift CA-7
         run: terraform plan -detailed-exitcode

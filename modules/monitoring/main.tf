@@ -5,6 +5,7 @@ resource "aws_sns_topic" "alerts" {
 }
 
 resource "aws_sns_topic_subscription" "email" {
+  count     = var.alarm_email != "" ? 1 : 0
   topic_arn = aws_sns_topic.alerts.arn
   protocol  = "email"
   endpoint  = var.alarm_email
@@ -32,6 +33,8 @@ resource "aws_cloudwatch_dashboard" "golden_signals" {
           period = 60
           stat = "Sum"
           view = "timeSeries"
+          region = var.aws_region
+          annotations = {}
         }
       },
       {
@@ -49,6 +52,8 @@ resource "aws_cloudwatch_dashboard" "golden_signals" {
           period = 60
           stat = "Sum"
           view = "timeSeries"
+          region = var.aws_region
+          annotations = {}
         }
       },
       {
@@ -63,6 +68,8 @@ resource "aws_cloudwatch_dashboard" "golden_signals" {
           period = 60
           stat = "Average"
           view = "timeSeries"
+          region = var.aws_region
+          annotations = {}
         }
       },
       {
@@ -80,6 +87,8 @@ resource "aws_cloudwatch_dashboard" "golden_signals" {
           period = 60
           stat = "Average"
           view = "timeSeries"
+          region = var.aws_region
+          annotations = {}
         }
       },
       {
@@ -97,6 +106,8 @@ resource "aws_cloudwatch_dashboard" "golden_signals" {
           period = 60
           stat = "Average"
           view = "timeSeries"
+          region = var.aws_region
+          annotations = {}
         }
       },
       {
@@ -111,6 +122,8 @@ resource "aws_cloudwatch_dashboard" "golden_signals" {
           period = 60
           stat = "Average"
           view = "timeSeries"
+          region = var.aws_region
+          annotations = {}
         }
       },
       {
@@ -125,6 +138,8 @@ resource "aws_cloudwatch_dashboard" "golden_signals" {
           period = 60
           stat = "Sum"
           view = "timeSeries"
+          region = var.aws_region
+          annotations = {}
         }
       }
     ]

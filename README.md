@@ -62,7 +62,9 @@ Internet -> CloudFront CDN -> WAF -> ALB -> ECS Fargate -> App
 | Environment | Terraform Apply | Purpose |
 |---|---|---|
 | dev | On merge to main after approval | Development and testing |
-| staging | Never - plan only | Pre-production validation |
+| staging | Never - plan only | Pre-production validation (demo only) |
+
+**Important**: This repository only applies changes to the `dev` environment. The `staging` folder is for validation and demos only — do not run `terraform apply` against `environments/staging` in this account. See [environments/staging/DO_NOT_APPLY.md](environments/staging/DO_NOT_APPLY.md) for details.
 
 ## Pipeline Flow
 
@@ -240,3 +242,14 @@ Expensive resources to watch:
 - NAT Gateway approximately 1 dollar per day
 - ALB approximately 0.60 dollars per day
 - ECS tasks approximately 0.04 dollars per hour per vCPU
+
+## Deployed (dev)
+
+The `dev` environment is deployed in AWS (us-east-1) for testing. You can reach the application through the CloudFront distribution which fronts the ALB.
+
+- CloudFront URL: https://d2ficd3btkmau8.cloudfront.net
+- ALB DNS name: notesy-dev-alb-1393659005.us-east-1.elb.amazonaws.com
+
+If you see a 302 redirect to `/login/?next=/` that indicates the Django app is running and redirecting unauthenticated requests to the login page.
+
+Note: `staging` is configured for plan-only validation and is not automatically applied in this repository.

@@ -24,6 +24,7 @@ module "rds" {
   project_name       = "notesy"
   environment        = "dev"
   private_subnet_ids = module.networking.private_subnet_ids
+  vpc_id             = module.networking.vpc_id
   db_name            = var.db_name
   db_username        = var.db_username
   db_instance_class  = var.db_instance_class
@@ -40,6 +41,7 @@ module "redis" {
   project_name       = "notesy"
   environment        = "dev"
   private_subnet_ids = module.networking.private_subnet_ids
+  vpc_id             = module.networking.vpc_id
   node_type          = var.redis_node_type
   engine_version     = var.redis_engine_version
   auth_token         = var.redis_auth_token

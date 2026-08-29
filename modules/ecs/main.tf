@@ -81,6 +81,14 @@ resource "aws_security_group" "ecs_tasks" {
   }
 }
 
+# Build container secrets list only when ARNs provided
+locals {
+  container_secrets = concat(
+    var.db_secret_arn != "" ? [ { name = "DATABASE_URL", valueFrom = var.db_secret_arn } ] : [],
+    var.redis_secret_arn != "" ? [ { name = "REDIS_URL", valueFrom = var.redis_secret_arn } ] : []
+  )
+}
+
 # ECS Task Definition
 resource "aws_ecs_task_definition" "app" {
   family                   = "${var.project_name}-${var.environment}"
@@ -107,16 +115,7 @@ resource "aws_ecs_task_definition" "app" {
         value = "d29xdiu2w69t4k.cloudfront.net,localhost,127.0.0.1"
       }
     ]
-    secrets = [
-      {
-        name = "DATABASE_URL"
-        valueFrom = var.db_secret_arn
-      },
-      {
-        name = "REDIS_URL"
-        valueFrom = var.redis_secret_arn
-      }
-    ]
+    secrets = local.container_secrets
     logConfiguration = {
       logDriver = "awslogs"
       options = {
