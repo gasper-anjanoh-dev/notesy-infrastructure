@@ -1,10 +1,7 @@
 resource "aws_sns_topic" "alerts" {
   name = "${var.project_name}-${var.environment}-alerts"
 
-  tags = merge({
-    Environment = var.environment
-    ManagedBy   = "terraform"
-  }, var.tags)
+  # dashboard resource does not support tags in this provider version
 }
 
 resource "aws_sns_topic_subscription" "email" {
@@ -133,10 +130,7 @@ resource "aws_cloudwatch_dashboard" "golden_signals" {
     ]
   })
 
-  tags = merge({
-    Environment = var.environment
-    ManagedBy   = "terraform"
-  }, var.tags)
+  
 }
 
 #########################
@@ -148,7 +142,6 @@ resource "aws_cloudwatch_metric_alarm" "alb_5xx_rate" {
   alarm_name          = "${var.project_name}-${var.environment}-alb-5xx-rate"
   comparison_operator = "GreaterThanThreshold"
   evaluation_periods  = 5
-  period              = 60
   threshold           = 1.0
   alarm_description   = "ALB 5xx rate greater than 1%"
   alarm_actions       = [aws_sns_topic.alerts.arn]
@@ -159,6 +152,7 @@ resource "aws_cloudwatch_metric_alarm" "alb_5xx_rate" {
       namespace = "AWS/ApplicationELB"
       metric_name = "HTTPCode_Target_5XX_Count"
       dimensions = { "TargetGroup" = var.target_group_arn }
+      period = 60
       stat = "Sum"
     }
     return_data = false
@@ -170,6 +164,7 @@ resource "aws_cloudwatch_metric_alarm" "alb_5xx_rate" {
       namespace = "AWS/ApplicationELB"
       metric_name = "RequestCount"
       dimensions = { "TargetGroup" = var.target_group_arn }
+      period = 60
       stat = "Sum"
     }
     return_data = false
@@ -188,7 +183,6 @@ resource "aws_cloudwatch_metric_alarm" "ecs_cpu" {
   alarm_name          = "${var.project_name}-${var.environment}-ecs-cpu-high"
   comparison_operator = "GreaterThanThreshold"
   evaluation_periods  = 5
-  period              = 60
   threshold           = 80
   alarm_description   = "ECS service CPU > 80%"
   alarm_actions       = [aws_sns_topic.alerts.arn]
@@ -202,6 +196,7 @@ resource "aws_cloudwatch_metric_alarm" "ecs_cpu" {
         ClusterName = var.ecs_cluster_name
         ServiceName = var.ecs_service_name
       }
+      period = 60
       stat = "Average"
     }
     return_data = true
@@ -213,7 +208,6 @@ resource "aws_cloudwatch_metric_alarm" "ecs_memory" {
   alarm_name          = "${var.project_name}-${var.environment}-ecs-memory-high"
   comparison_operator = "GreaterThanThreshold"
   evaluation_periods  = 5
-  period              = 60
   threshold           = 80
   alarm_description   = "ECS service Memory > 80%"
   alarm_actions       = [aws_sns_topic.alerts.arn]
@@ -227,6 +221,7 @@ resource "aws_cloudwatch_metric_alarm" "ecs_memory" {
         ClusterName = var.ecs_cluster_name
         ServiceName = var.ecs_service_name
       }
+      period = 60
       stat = "Average"
     }
     return_data = true
@@ -238,7 +233,6 @@ resource "aws_cloudwatch_metric_alarm" "rds_cpu" {
   alarm_name          = "${var.project_name}-${var.environment}-rds-cpu-high"
   comparison_operator = "GreaterThanThreshold"
   evaluation_periods  = 5
-  period              = 60
   threshold           = 70
   alarm_description   = "RDS CPU > 70%"
   alarm_actions       = [aws_sns_topic.alerts.arn]
@@ -249,6 +243,7 @@ resource "aws_cloudwatch_metric_alarm" "rds_cpu" {
       namespace = "AWS/RDS"
       metric_name = "CPUUtilization"
       dimensions = { "DBInstanceIdentifier" = var.rds_db_instance_identifier }
+      period = 60
       stat = "Average"
     }
     return_data = true
@@ -260,7 +255,6 @@ resource "aws_cloudwatch_metric_alarm" "alb_healthy_hosts" {
   alarm_name          = "${var.project_name}-${var.environment}-alb-healthy-hosts"
   comparison_operator = "LessThanThreshold"
   evaluation_periods  = 1
-  period              = 60
   threshold           = 1
   alarm_description   = "ALB healthy host count < 1"
   alarm_actions       = [aws_sns_topic.alerts.arn]
@@ -271,6 +265,7 @@ resource "aws_cloudwatch_metric_alarm" "alb_healthy_hosts" {
       namespace = "AWS/ApplicationELB"
       metric_name = "HealthyHostCount"
       dimensions = { "TargetGroup" = var.target_group_arn }
+      period = 60
       stat = "Minimum"
     }
     return_data = true

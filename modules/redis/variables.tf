@@ -13,6 +13,12 @@ variable "private_subnet_ids" {
   type        = list(string)
 }
 
+variable "vpc_id" {
+  description = "VPC id (optional)"
+  type        = string
+  default     = ""
+}
+
 variable "ecs_security_group_id" {
   description = "Security group ID of ECS tasks allowed to access Redis"
   type        = string

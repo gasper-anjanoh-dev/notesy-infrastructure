@@ -29,7 +29,6 @@ resource "aws_db_subnet_group" "rds" {
 
 resource "random_password" "rds_master" {
   length           = 16
-  override_characters = "@#_+-=;:,."
   special          = true
 }
 
@@ -39,7 +38,7 @@ resource "aws_db_instance" "db" {
   engine                  = "postgres"
   engine_version          = var.engine_version
   instance_class          = var.db_instance_class
-  name                    = var.db_name
+  db_name                 = var.db_name
   username                = var.db_username
   password                = random_password.rds_master.result
   db_subnet_group_name    = aws_db_subnet_group.rds.name
@@ -50,12 +49,7 @@ resource "aws_db_instance" "db" {
   publicly_accessible     = false
   skip_final_snapshot     = true
 
-  dynamic "kms_key_id" {
-    for_each = var.kms_key_id != "" ? [1] : []
-    content {
-      kms_key_id = var.kms_key_id
-    }
-  }
+  kms_key_id = var.kms_key_id != "" ? var.kms_key_id : null
 
   tags = merge({
     Name        = "${var.project_name}-${var.environment}-db"
