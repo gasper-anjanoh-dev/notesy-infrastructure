@@ -33,6 +33,8 @@ resource "aws_cloudwatch_dashboard" "golden_signals" {
           period = 60
           stat = "Sum"
           view = "timeSeries"
+          region = var.aws_region
+          annotations = {}
         }
       },
       {
@@ -50,6 +52,8 @@ resource "aws_cloudwatch_dashboard" "golden_signals" {
           period = 60
           stat = "Sum"
           view = "timeSeries"
+          region = var.aws_region
+          annotations = {}
         }
       },
       {
@@ -64,6 +68,8 @@ resource "aws_cloudwatch_dashboard" "golden_signals" {
           period = 60
           stat = "Average"
           view = "timeSeries"
+          region = var.aws_region
+          annotations = {}
         }
       },
       {
@@ -81,6 +87,8 @@ resource "aws_cloudwatch_dashboard" "golden_signals" {
           period = 60
           stat = "Average"
           view = "timeSeries"
+          region = var.aws_region
+          annotations = {}
         }
       },
       {
@@ -98,6 +106,8 @@ resource "aws_cloudwatch_dashboard" "golden_signals" {
           period = 60
           stat = "Average"
           view = "timeSeries"
+          region = var.aws_region
+          annotations = {}
         }
       },
       {
@@ -112,6 +122,8 @@ resource "aws_cloudwatch_dashboard" "golden_signals" {
           period = 60
           stat = "Average"
           view = "timeSeries"
+          region = var.aws_region
+          annotations = {}
         }
       },
       {
@@ -126,6 +138,8 @@ resource "aws_cloudwatch_dashboard" "golden_signals" {
           period = 60
           stat = "Sum"
           view = "timeSeries"
+          region = var.aws_region
+          annotations = {}
         }
       }
     ]
