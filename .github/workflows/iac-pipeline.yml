@@ -5,13 +5,13 @@ on:
     branches:
       - main
     paths:
-      - 'environments/**'
+      - 'environments/dev/**'
       - 'modules/**'
   push:
     branches:
       - main
     paths:
-      - 'environments/**'
+      - 'environments/dev/**'
       - 'modules/**'
   schedule:
     - cron: '0 6 * * *'

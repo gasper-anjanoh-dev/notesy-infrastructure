@@ -62,7 +62,9 @@ Internet -> CloudFront CDN -> WAF -> ALB -> ECS Fargate -> App
 | Environment | Terraform Apply | Purpose |
 |---|---|---|
 | dev | On merge to main after approval | Development and testing |
-| staging | Never - plan only | Pre-production validation |
+| staging | Never - plan only | Pre-production validation (demo only) |
+
+**Important**: This repository only applies changes to the `dev` environment. The `staging` folder is for validation and demos only — do not run `terraform apply` against `environments/staging` in this account. See [environments/staging/DO_NOT_APPLY.md](environments/staging/DO_NOT_APPLY.md) for details.
 
 ## Pipeline Flow
 
