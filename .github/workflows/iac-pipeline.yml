@@ -6,12 +6,14 @@ on:
       - main
     paths:
       - 'environments/dev/**'
+      - 'environments/prod-west/**'
       - 'modules/**'
   push:
     branches:
       - main
     paths:
       - 'environments/dev/**'
+      - 'environments/prod-west/**'
       - 'modules/**'
   schedule:
     - cron: '0 6 * * *'
@@ -105,13 +107,13 @@ jobs:
               body: '## Terraform Plan - DEV\n```\n' + truncated + '\n```'
             });
 
-  plan-staging:
-    name: Plan STAGING
+  plan-prod-west:
+    name: Plan PROD-WEST (plan only)
     runs-on: ubuntu-latest
     needs: security-scan
     defaults:
       run:
-        working-directory: environments/staging
+        working-directory: environments/prod-west
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -135,6 +137,7 @@ jobs:
         run: terraform validate
 
       - name: Terraform Plan
+        id: plan_prod_west
         run: terraform plan -no-color 2>&1 | tee plan_output.txt
         continue-on-error: true
 
@@ -144,7 +147,7 @@ jobs:
         with:
           script: |
             const fs = require('fs');
-            const plan = fs.readFileSync('environments/staging/plan_output.txt', 'utf8');
+            const plan = fs.readFileSync('environments/prod-west/plan_output.txt', 'utf8');
             const truncated = plan.length > 60000
               ? plan.substring(0, 60000) + '\n... truncated ...'
               : plan;
@@ -152,13 +155,13 @@ jobs:
               issue_number: context.issue.number,
               owner: context.repo.owner,
               repo: context.repo.repo,
-              body: '## Terraform Plan - STAGING (plan only - never apply)\n```\n' + truncated + '\n```'
+              body: '## Terraform Plan - PROD-WEST (plan only)\n```\n' + truncated + '\n```'
             });
 
   approve-apply:
     name: Approve Apply
     runs-on: ubuntu-latest
-    needs: [plan-dev, plan-staging]
+    needs: [plan-dev]
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     environment: apply-approval
     steps:

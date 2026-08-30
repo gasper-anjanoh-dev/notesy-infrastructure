@@ -77,25 +77,10 @@ resource "aws_lb_target_group" "app" {
   }
 }
 
-# HTTP Listener - either redirect to HTTPS (if certificate provided) or forward to TG
-resource "aws_lb_listener" "http_redirect" {
-  count             = var.certificate_arn != "" ? 1 : 0
-  load_balancer_arn = aws_lb.main.arn
-  port              = 80
-  protocol          = "HTTP"
-
-  default_action {
-    type = "redirect"
-    redirect {
-      port        = "443"
-      protocol    = "HTTPS"
-      status_code = "HTTP_301"
-    }
-  }
-}
-
+# HTTP Listener - always forward on port 80 so CloudFront origin (http-only)
+# can reach the ALB without being redirected. CloudFront will enforce
+# HTTPS for viewers via its `viewer_protocol_policy`.
 resource "aws_lb_listener" "http_forward" {
-  count             = var.certificate_arn == "" ? 1 : 0
   load_balancer_arn = aws_lb.main.arn
   port              = 80
   protocol          = "HTTP"

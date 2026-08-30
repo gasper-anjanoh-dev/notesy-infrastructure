@@ -1,13 +1,18 @@
+# Standby region: prod-west (us-west-2)
+# This environment demonstrates deploying the same modules to a secondary
+# region with lighter resource allocations. This is a plan-only/demo workspace
+# and should not be applied without review.
+
 module "networking" {
   source       = "../../modules/networking"
   project_name = "notesy"
-  environment  = "dev"
+  environment  = "prod-west"
 }
 
 module "alb" {
   source            = "../../modules/alb"
   project_name      = "notesy"
-  environment       = "dev"
+  environment       = "prod-west"
   vpc_id            = module.networking.vpc_id
   public_subnet_ids = module.networking.public_subnet_ids
 }
@@ -15,14 +20,14 @@ module "alb" {
 module "waf" {
   source       = "../../modules/waf"
   project_name = "notesy"
-  environment  = "dev"
+  environment  = "prod-west"
   scope        = "CLOUDFRONT"
 }
 
 module "rds" {
   source             = "../../modules/rds"
   project_name       = "notesy"
-  environment        = "dev"
+  environment        = "prod-west"
   private_subnet_ids = module.networking.private_subnet_ids
   vpc_id             = module.networking.vpc_id
   db_name            = var.db_name
@@ -39,7 +44,7 @@ module "rds" {
 module "redis" {
   source             = "../../modules/redis"
   project_name       = "notesy"
-  environment        = "dev"
+  environment        = "prod-west"
   private_subnet_ids = module.networking.private_subnet_ids
   vpc_id             = module.networking.vpc_id
   node_type          = var.redis_node_type
@@ -52,7 +57,7 @@ module "redis" {
 module "ecs" {
   source                = "../../modules/ecs"
   project_name          = "notesy"
-  environment           = "dev"
+  environment           = "prod-west"
   vpc_id                = module.networking.vpc_id
   private_subnet_ids    = module.networking.private_subnet_ids
   alb_security_group_id = module.alb.alb_security_group_id
@@ -61,15 +66,15 @@ module "ecs" {
   app_image             = var.app_image
   db_secret_arn         = module.rds.db_secret_arn
   redis_secret_arn      = module.redis.redis_secret_arn
-  cloudfront_domain     = module.cdn.cloudfront_domain_name
+  cloudfront_domain     = "" # standby region has no custom CloudFront domain yet
   alb_dns_name          = module.alb.alb_dns_name
-  desired_count         = 2
+  desired_count         = 1
 }
 
 module "cdn" {
   source       = "../../modules/cdn"
   project_name = "notesy"
-  environment  = "dev"
+  environment  = "prod-west"
   alb_dns_name = module.alb.alb_dns_name
   waf_acl_arn  = module.waf.web_acl_arn
 }
@@ -96,7 +101,7 @@ resource "aws_security_group_rule" "ecs_to_redis" {
 module "autoscaling" {
   source       = "../../modules/autoscaling"
   project_name = "notesy"
-  environment  = "dev"
+  environment  = "prod-west"
   cluster_name = module.ecs.cluster_name
   service_name = module.ecs.service_name
   min_capacity = 1
@@ -106,7 +111,7 @@ module "autoscaling" {
 module "monitoring" {
   source                    = "../../modules/monitoring"
   project_name              = "notesy"
-  environment               = "dev"
+  environment               = "prod-west"
   alb_name                  = module.alb.alb_arn
   target_group_arn          = module.alb.target_group_arn
   ecs_cluster_name          = module.ecs.cluster_name

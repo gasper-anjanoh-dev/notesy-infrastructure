@@ -20,7 +20,5 @@ output "alb_security_group_id" {
 
 output "alb_listener_arn" {
   description = "ARN of the ALB HTTP listener"
-  value = length(aws_lb_listener.https) > 0 ? aws_lb_listener.https[0].arn : (
-    length(aws_lb_listener.http_redirect) > 0 ? aws_lb_listener.http_redirect[0].arn : aws_lb_listener.http_forward[0].arn
-  )
+  value = length(aws_lb_listener.https) > 0 ? aws_lb_listener.https[0].arn : aws_lb_listener.http_forward.arn
 }
