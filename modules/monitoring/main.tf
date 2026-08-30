@@ -1,7 +1,5 @@
 resource "aws_sns_topic" "alerts" {
   name = "${var.project_name}-${var.environment}-alerts"
-
-  # dashboard resource does not support tags in this provider version
 }
 
 resource "aws_sns_topic_subscription" "email" {
@@ -21,6 +19,7 @@ resource "aws_cloudwatch_dashboard" "golden_signals" {
 
   dashboard_body = jsonencode({
     widgets = [
+      # Traffic: Request count (visibility only)
       {
         type = "metric"
         x = 0
@@ -28,8 +27,8 @@ resource "aws_cloudwatch_dashboard" "golden_signals" {
         width = 12
         height = 6
         properties = {
-          title = "ALB - Request Count"
-          metrics = [ ["AWS/ApplicationELB", "RequestCount", "LoadBalancer", var.alb_name]]
+          title = "ALB - Request Count (per minute)"
+          metrics = [ ["AWS/ApplicationELB", "RequestCount", "LoadBalancer", var.alb_name] ]
           period = 60
           stat = "Sum"
           view = "timeSeries"
@@ -37,6 +36,8 @@ resource "aws_cloudwatch_dashboard" "golden_signals" {
           annotations = {}
         }
       },
+
+      # Errors: 5xx count
       {
         type = "metric"
         x = 12
@@ -56,6 +57,8 @@ resource "aws_cloudwatch_dashboard" "golden_signals" {
           annotations = {}
         }
       },
+
+      # Latency: Target response time (P99)
       {
         type = "metric"
         x = 0
@@ -63,15 +66,17 @@ resource "aws_cloudwatch_dashboard" "golden_signals" {
         width = 12
         height = 6
         properties = {
-          title = "ALB - Target Response Time"
+          title = "ALB - TargetResponseTime (P99)"
           metrics = [ ["AWS/ApplicationELB", "TargetResponseTime", "TargetGroup", var.target_group_arn] ]
           period = 60
-          stat = "Average"
+          stat = "p99"
           view = "timeSeries"
           region = var.aws_region
           annotations = {}
         }
       },
+
+      # Saturation: ECS CPU & Memory
       {
         type = "metric"
         x = 12
@@ -91,6 +96,8 @@ resource "aws_cloudwatch_dashboard" "golden_signals" {
           annotations = {}
         }
       },
+
+      # RDS: CPU & Connections
       {
         type = "metric"
         x = 0
@@ -110,6 +117,8 @@ resource "aws_cloudwatch_dashboard" "golden_signals" {
           annotations = {}
         }
       },
+
+      # ElastiCache: Cache Hit Rate
       {
         type = "metric"
         x = 12
@@ -126,6 +135,8 @@ resource "aws_cloudwatch_dashboard" "golden_signals" {
           annotations = {}
         }
       },
+
+      # WAF blocked requests
       {
         type = "metric"
         x = 0
@@ -144,21 +155,41 @@ resource "aws_cloudwatch_dashboard" "golden_signals" {
       }
     ]
   })
-
-  
 }
 
 #########################
-# CloudWatch Alarms
+# CloudWatch Alarms (Four Golden Signals + others)
 #########################
 
-# 1) ALB 5xx rate > 1% for 5 minutes (metric math)
-resource "aws_cloudwatch_metric_alarm" "alb_5xx_rate" {
-  alarm_name          = "${var.project_name}-${var.environment}-alb-5xx-rate"
+# Latency: P99 TargetResponseTime > 2s (over ~2 evaluation periods)
+resource "aws_cloudwatch_metric_alarm" "latency_p99" {
+  alarm_name          = "${var.project_name}-${var.environment}-latency-high"
+  comparison_operator = "GreaterThanThreshold"
+  evaluation_periods  = 2
+  threshold           = 2
+  alarm_description   = "P99 latency above 2 seconds indicates degraded user experience"
+  alarm_actions       = [aws_sns_topic.alerts.arn]
+
+  metric_query {
+    id = "latency"
+    metric {
+      namespace = "AWS/ApplicationELB"
+      metric_name = "TargetResponseTime"
+      dimensions = { "TargetGroup" = var.target_group_arn }
+      period = 60
+      stat = "Maximum"
+    }
+    return_data = true
+  }
+}
+
+# Errors: 5xx count - threshold > 10 errors in 5 minutes
+resource "aws_cloudwatch_metric_alarm" "alb_5xx_count" {
+  alarm_name          = "${var.project_name}-${var.environment}-error-rate-high"
   comparison_operator = "GreaterThanThreshold"
   evaluation_periods  = 5
-  threshold           = 1.0
-  alarm_description   = "ALB 5xx rate greater than 1%"
+  threshold           = 10
+  alarm_description   = "Sustained 5xx errors indicate application or infrastructure failure"
   alarm_actions       = [aws_sns_topic.alerts.arn]
 
   metric_query {
@@ -170,36 +201,17 @@ resource "aws_cloudwatch_metric_alarm" "alb_5xx_rate" {
       period = 60
       stat = "Sum"
     }
-    return_data = false
-  }
-
-  metric_query {
-    id = "requests"
-    metric {
-      namespace = "AWS/ApplicationELB"
-      metric_name = "RequestCount"
-      dimensions = { "TargetGroup" = var.target_group_arn }
-      period = 60
-      stat = "Sum"
-    }
-    return_data = false
-  }
-
-  metric_query {
-    id = "error_rate"
-    expression = "100 * errors / requests"
-    label = "5xx percentage"
     return_data = true
   }
 }
 
-# 2) ECS CPU > 80% for 5 minutes
+# Saturation: ECS CPU > 80% for 10 minutes (evaluation periods = 2 x 5min)
 resource "aws_cloudwatch_metric_alarm" "ecs_cpu" {
-  alarm_name          = "${var.project_name}-${var.environment}-ecs-cpu-high"
+  alarm_name          = "${var.project_name}-${var.environment}-cpu-high"
   comparison_operator = "GreaterThanThreshold"
-  evaluation_periods  = 5
+  evaluation_periods  = 2
   threshold           = 80
-  alarm_description   = "ECS service CPU > 80%"
+  alarm_description   = "Auto scaling target is 70% — 80% indicates scaling is not keeping up"
   alarm_actions       = [aws_sns_topic.alerts.arn]
 
   metric_query {
@@ -211,20 +223,19 @@ resource "aws_cloudwatch_metric_alarm" "ecs_cpu" {
         ClusterName = var.ecs_cluster_name
         ServiceName = var.ecs_service_name
       }
-      period = 60
+      period = 300
       stat = "Average"
     }
     return_data = true
   }
 }
 
-# 3) ECS Memory > 80% for 5 minutes
 resource "aws_cloudwatch_metric_alarm" "ecs_memory" {
-  alarm_name          = "${var.project_name}-${var.environment}-ecs-memory-high"
+  alarm_name          = "${var.project_name}-${var.environment}-memory-high"
   comparison_operator = "GreaterThanThreshold"
-  evaluation_periods  = 5
+  evaluation_periods  = 2
   threshold           = 80
-  alarm_description   = "ECS service Memory > 80%"
+  alarm_description   = "Memory saturation above 80% for 10 minutes"
   alarm_actions       = [aws_sns_topic.alerts.arn]
 
   metric_query {
@@ -236,18 +247,18 @@ resource "aws_cloudwatch_metric_alarm" "ecs_memory" {
         ClusterName = var.ecs_cluster_name
         ServiceName = var.ecs_service_name
       }
-      period = 60
+      period = 300
       stat = "Average"
     }
     return_data = true
   }
 }
 
-# 4) RDS CPU > 70% for 5 minutes
+# RDS CPU > 70% (2 evaluation periods)
 resource "aws_cloudwatch_metric_alarm" "rds_cpu" {
   alarm_name          = "${var.project_name}-${var.environment}-rds-cpu-high"
   comparison_operator = "GreaterThanThreshold"
-  evaluation_periods  = 5
+  evaluation_periods  = 2
   threshold           = 70
   alarm_description   = "RDS CPU > 70%"
   alarm_actions       = [aws_sns_topic.alerts.arn]
@@ -265,9 +276,9 @@ resource "aws_cloudwatch_metric_alarm" "rds_cpu" {
   }
 }
 
-# 5) ALB healthy host count < 1
+# ALB healthy host count < 1 (fire immediately)
 resource "aws_cloudwatch_metric_alarm" "alb_healthy_hosts" {
-  alarm_name          = "${var.project_name}-${var.environment}-alb-healthy-hosts"
+  alarm_name          = "${var.project_name}-${var.environment}-no-healthy-hosts"
   comparison_operator = "LessThanThreshold"
   evaluation_periods  = 1
   threshold           = 1
