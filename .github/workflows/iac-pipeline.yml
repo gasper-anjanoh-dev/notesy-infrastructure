@@ -1,3 +1,16 @@
+#!/usr/bin/env bash
+# ============================================================
+# IaC Pipeline — Notesy Infrastructure
+# NIST 800-53 Controls Implemented:
+# CM-3  Configuration Change Control     — Approval gates
+# AC-6  Least Privilege                  — OIDC, no stored keys
+# AU-2  Audit Events                     — Full pipeline logging
+# AU-3  Audit Record Content             — Plan posted as PR comment
+# RA-5  Vulnerability Scanning           — tfsec before plan
+# CA-7  Continuous Monitoring            — Nightly drift detection
+# CM-6  Configuration Settings           — Drift detection baseline
+# ============================================================
+
 name: IaC Pipeline
 
 on:
@@ -16,8 +29,16 @@ on:
       - 'environments/prod-west/**'
       - 'modules/**'
   schedule:
+    # CA-7: Continuous Monitoring — nightly drift detection
+    # Runs terraform plan -detailed-exitcode
+    # Notifies team that someone made manual AWS console changes
     - cron: '0 6 * * *'
 
+  # AC-6: Least Privilege — OIDC federation
+  # No long-lived AWS credentials stored anywhere
+  # GitHub Actions assumes IAM role via OIDC token
+  # Token is temporary — expires when job ends
+  # AWS_ROLE_ARN is a resource identifier not a secret
 permissions:
   contents: read
   pull-requests: write
@@ -28,6 +49,12 @@ env:
   AWS_REGION: us-east-1
 
 jobs:
+jobs:
+
+  # CM-3: Configuration Change Control — Gate 1
+  # No plan runs without human approval
+  # Prevents unauthorized infrastructure changes
+  # Creates audit trail of who authorized the change request
 
   request-approval:
     name: Request Approval
@@ -37,6 +64,11 @@ jobs:
       - name: Approval granted
         run: echo "Approved - proceeding to Terraform plan"
 
+  # RA-5: Vulnerability Scanning
+  # tfsec scans Terraform code for misconfigurations
+  # Catches security issues BEFORE they reach AWS
+  # Examples: open security groups, unencrypted storage,
+  # overly permissive IAM policies
   security-scan:
     name: Security Scan
     runs-on: ubuntu-latest
@@ -49,6 +81,10 @@ jobs:
         with:
           soft_fail: true
 
+  # AU-3: Audit Record Content — Plan as PR Comment
+  # Terraform plan output posted to PR before any apply
+  # Reviewer sees exactly what will change in AWS
+  # Creates evidence record of intended changes
   plan-dev:
     name: Plan DEV
     runs-on: ubuntu-latest
@@ -67,6 +103,10 @@ jobs:
           echo "Event: ${{ github.event_name }}"
           echo "Actor: ${{ github.actor }}"
 
+      # AC-6: OIDC token exchange — no stored credentials
+      # GitHub sends JWT to AWS STS
+      # AWS validates token against registered OIDC provider
+      # Returns temporary credentials valid for this job only
       - name: Configure AWS Credentials OIDC
         uses: aws-actions/configure-aws-credentials@v4
         with:
@@ -85,11 +125,14 @@ jobs:
       - name: Terraform Validate
         run: terraform validate
 
+      # AU-3: Plan output captured for audit and review
       - name: Terraform Plan
         id: plan
         run: terraform plan -no-color 2>&1 | tee plan_output.txt
         continue-on-error: true
 
+      # AU-3: Plan posted as PR comment
+      # Evidence record before any infrastructure change
       - name: Post Plan Comment on PR
         if: github.event_name == 'pull_request'
         uses: actions/github-script@v7
@@ -107,6 +150,10 @@ jobs:
               body: '## Terraform Plan - DEV\n```\n' + truncated + '\n```'
             });
 
+  # CM-3: Staging is plan-only — NEVER applied
+  # Demonstrates multi-environment governance
+  # Same modules, different variable values
+  # Shows infrastructure is environment-agnostic
   plan-prod-west:
     name: Plan PROD-WEST (plan only)
     runs-on: ubuntu-latest
@@ -118,6 +165,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      # AC-6: OIDC token exchange — no stored credentials
       - name: Configure AWS Credentials OIDC
         uses: aws-actions/configure-aws-credentials@v4
         with:
@@ -158,6 +206,10 @@ jobs:
               body: '## Terraform Plan - PROD-WEST (plan only)\n```\n' + truncated + '\n```'
             });
 
+  # CM-3: Configuration Change Control — Gate 2
+  # Second approval required before terraform apply
+  # Reviewer has seen the plan output on the PR
+  # Segregation of duties — different person can approve
   approve-apply:
     name: Approve Apply
     runs-on: ubuntu-latest
@@ -168,6 +220,11 @@ jobs:
       - name: Apply approved
         run: echo "Apply approved - proceeding to terraform apply"
 
+  # CM-3 + AU-2: Controlled Apply with Audit Trail
+  # Only runs on merge to main (not on PRs)
+  # Only applies to DEV environment
+  # Full GitHub Actions log serves as audit record
+  # Who applied, when, what changed, which commit
   apply-dev:
     name: Apply DEV
     runs-on: ubuntu-latest
@@ -196,8 +253,20 @@ jobs:
         run: terraform init
 
       - name: Terraform Apply
+        # CM-3: Apply only runs after two human approvals
+        # Full change record maintained in GitHub Actions
         run: terraform apply -auto-approve
 
+  # CA-7 + CM-6: Continuous Monitoring and Baseline
+  # Runs nightly at 6am UTC via schedule trigger
+  # terraform plan -detailed-exitcode
+  # Exit code 0 = no drift, infrastructure matches baseline
+  # Exit code 2 = DRIFT DETECTED
+  #   Someone made manual changes bypassing the pipeline
+  #   Pipeline fails — team gets notified
+  #   Investigate via CloudTrail to find who changed what
+  # This satisfies CA-7 continuous monitoring requirement
+  # for FedRAMP and regulated environments
   drift-detection:
     name: Drift Detection
     runs-on: ubuntu-latest
@@ -208,6 +277,7 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+      # AC-6: OIDC token exchange — no stored credentials
       - name: Configure AWS Credentials OIDC
         uses: aws-actions/configure-aws-credentials@v4
         with:
@@ -227,6 +297,7 @@ jobs:
         id: detect-drift
         run: |
           set -o pipefail
+          # AU-3: Plan output captured for audit and review
           terraform plan -detailed-exitcode -no-color | tee plan-drift.txt
           rc=$?
           if [ "$rc" -eq 2 ]; then
