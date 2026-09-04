@@ -158,7 +158,6 @@ resource "aws_cloudwatch_dashboard" "golden_signals" {
 
 }
   # Note: tags not supported on aws_cloudwatch_dashboard resource; removed demo tag to allow terraform operations
-}
 
 #########################
 # CloudWatch Alarms (Four Golden Signals + others)
