@@ -156,8 +156,8 @@ resource "aws_cloudwatch_dashboard" "golden_signals" {
     ]
   })
 
-  # Demo tag for interview pipeline: harmless metadata to trigger terraform plan
-  tags = merge(var.common_tags, { InterviewDemo = "JPMC-2026-09-04" })
+}
+  # Note: tags not supported on aws_cloudwatch_dashboard resource; removed demo tag to allow terraform operations
 }
 
 #########################
