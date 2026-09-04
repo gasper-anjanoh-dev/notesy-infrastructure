@@ -11,14 +11,7 @@
 # ============================================================
 
 name: IaC Pipeline
-
-
-      - 'environments/prod-west/**'
-  TF_VERSION: 1.15.5
-  AWS_REGION: us-east-1
-
-jobs:
-      - 'modules/**'
+on:
   push:
     branches:
       - main
@@ -31,12 +24,14 @@ jobs:
     # Runs terraform plan -detailed-exitcode
     # Notifies team that someone made manual AWS console changes
     - cron: '0 6 * * *'
+  # Allow manual runs from the Actions UI
+  workflow_dispatch: {}
 
-  # AC-6: Least Privilege — OIDC federation
-  # No long-lived AWS credentials stored anywhere
-  # GitHub Actions assumes IAM role via OIDC token
-  # Token is temporary — expires when job ends
-  # AWS_ROLE_ARN is a resource identifier not a secret
+# AC-6: Least Privilege — OIDC federation
+# No long-lived AWS credentials stored anywhere
+# GitHub Actions assumes IAM role via OIDC token
+# Token is temporary — expires when job ends
+# AWS_ROLE_ARN is a resource identifier not a secret
 permissions:
   contents: read
   pull-requests: write
@@ -46,7 +41,6 @@ env:
   TF_VERSION: 1.15.5
   AWS_REGION: us-east-1
 
-jobs:
 jobs:
 
   # CM-3: Configuration Change Control — Gate 1
