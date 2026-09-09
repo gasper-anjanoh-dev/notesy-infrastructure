@@ -48,6 +48,9 @@ resource "aws_elasticache_cluster" "redis" {
 resource "aws_secretsmanager_secret" "redis_secret" {
   name = "${var.project_name}-${var.environment}-redis-credentials"
 
+  # Destroy secret immediately when requested by terraform (no recovery window)
+  recovery_window_in_days = 0
+
   tags = merge({
     Environment = var.environment
     ManagedBy   = "terraform"
