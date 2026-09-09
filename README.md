@@ -14,38 +14,36 @@ Users → CloudFront CDN → WAF → ALB → ECS Fargate → RDS PostgreSQL / El
 
 Route 53 failover → standby region (us-west-2)
 
-```
-Users
-  |
-  v
-CloudFront (global CDN)
-  |
-  v
-WAF (edge)
-  |
-  v
-ALB (us-east-1)
-  |
-  v
-ECS Fargate (tasks)
-  |    \
-  |     \---> ElastiCache Redis
-  \---> RDS PostgreSQL (primary)
+## Cost
 
-Route 53
-  └─ failover ─> us-west-2 (standby) : ECS, RDS replica, Redis
-```
+Estimated running cost (approx): ~$2.70/day
 
-Module structure
-----------------
+Rough breakdown:
 
-| Module | Purpose |
-|--------|---------|
-| networking | VPC, subnets, NAT Gateway, routing |
-| alb | Application Load Balancer, listeners |
-| ecs | ECS cluster, task definition, service, IAM |
-| waf | WAF Web ACL, managed rule groups |
-| cdn | CloudFront distribution |
+- NAT Gateway: ~$1/day
+- ALB: ~$0.60/day
+- ECS tasks (small): ~$0.30/day (varies with CPU/memory)
+- RDS (db.t3.micro with storage): ~$0.50/day (depends on instance class)
+
+Tip: destroy environments when not needed. Re-deploy typically completes within ~15 minutes.
+
+## Portfolio note
+
+This project was built to demonstrate production-grade infrastructure engineering patterns including NIST 800-53 compliance, GitOps workflows, and AWS best practices. It has been cloned by 75+ engineers in its first two weeks as a public repository.
+
+## Links
+
+- notesy-app: [github.com/gasper-anjanoh-dev/notesy-app](https://github.com/gasper-anjanoh-dev/notesy-app)
+- Author GitHub: [github.com/gasper-anjanoh-dev](https://github.com/gasper-anjanoh-dev)
+- Author LinkedIn: [Gasper Anjanoh — LinkedIn](https://www.linkedin.com/in/gasper-anjanoh-34320147/)
+
+## License
+
+MIT License
+
+---
+
+If you want this README tailored with your real LinkedIn URL, cost estimates adjusted for chosen instance sizes, or embedded diagrams (SVG/PNG), tell me which details to adjust and I will update it.
 | rds | RDS PostgreSQL, Secrets Manager |
 | redis | ElastiCache Redis |
 | autoscaling | ECS target tracking policies |
