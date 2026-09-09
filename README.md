@@ -158,7 +158,7 @@ Links
 
 - notesy-app: https://github.com/gasper-anjanoh-dev/notesy-app
 - Author GitHub: https://github.com/gasper-anjanoh-dev
-- Author LinkedIn: https://www.linkedin.com/in/gasper-anjanoh-dev
+- Author LinkedIn: https://www.linkedin.com/in/gasper-anjanoh-34320147/
 
 License
 -------
