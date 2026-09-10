@@ -9,55 +9,53 @@ Production-grade AWS infrastructure for a Django application demonstrating NIST 
 
 ## Architecture
 
+## Architecture
+
 Users Globally
-	│
-	▼
-┌─────────────────────┐
-│    CloudFront CDN   │
-│   (Global Edge)     │
-└──────────┬──────────┘
-	│
-	▼
-┌─────────────────────┐
-│    WAF Web ACL      │
-│  (Edge Protection)  │
-└──────────┬──────────┘
-	│
-	▼
-┌─────────────────────┐
-│        ALB          │
-│  (Load Balancer)    │
-└──────────┬──────────┘
-	│
-	▼
-┌───────────────────────────────┐
-│        ECS Fargate            │
-│   (Django + Gunicorn)         │
-└────┬──────────┬──────────┬─────┘
-     │          │          │
-     ▼          │          ▼
-┌────────────┐  │   ┌──────────────┐
-│   RDS      │  │   │ ElastiCache  │
-│ PostgreSQL │  │   │    Redis     │
-│  (Multi-AZ)│  │   │  (Sessions)  │
-└────────────┘  │   └──────────────┘
-		    │
-		    ▼
-	    ┌──────────────┐
-	    │  Observability│
-	    │ CloudWatch /  │
-	    │  SNS / Dashbds│
-	    └──────────────┘
+	  │
+	  ▼
+  ┌─────────────────────┐
+  │   CloudFront CDN     │
+  │    (Global Edge)     │
+  └──────────┬───────────┘
+		   │
+		   ▼
+  ┌─────────────────────┐
+  │     WAF Web ACL      │
+  │   (Edge Protection)  │
+  └──────────┬───────────┘
+		   │
+		   ▼
+  ┌─────────────────────┐
+  │         ALB          │
+  │   (Application LB)   │
+  └──────────┬───────────┘
+		   │
+		   ▼
+  ┌──────────────────────────────────────┐
+  │             ECS Fargate              │
+  │         (Django + Gunicorn)          │
+  └──────┬───────────┬──────────┬────────┘
+	    │           │          │
+	    │           │          │
+	    ▼           │          ▼
+  ┌────────────┐     │    ┌──────────────┐
+  │   RDS      │     │    │  ElastiCache │
+  │ PostgreSQL │     │    │     Redis    │
+  │  (Multi-AZ)│     │    │   (Sessions)  │
+  └────────────┘     │    └──────────────┘
+				 ▼
+			┌──────────────┐
+			│ Observability│
+			│ CloudWatch / │
+			│ SNS / Dashbds│
+			└──────────────┘
 
 ### Multi-Region HA
 
-Route 53 Health Check
-│
-├── PRIMARY: us-east-1 (dev) — 2 ECS tasks
-│      Full stack active
-│
-└── STANDBY: us-west-2 (prod-west) — 1 ECS task (plan-only)
-	 Activates on failover; RDS read replica; lighter resources using same modules
+Route 53 health checks route traffic to the PRIMARY region (us-east-1) by default.
+- PRIMARY: us-east-1 (dev) — full stack active (ECS tasks, ALB, RDS Multi-AZ)
+- STANDBY: us-west-2 (prod-west) — plan-only standby; lighter footprint, RDS read replica; activates on failover
 
 ## Module Structure
 
@@ -109,45 +107,39 @@ Additional alarms:
 - RDS CPUUtilization > 70%
 - ALB HealthyHostCount < 1 (fires immediately — always critical)
 
+
 ## Pipeline Flow
 
 PR opened
-|
-▼
-
+	│
+	▼
 Gate 1: Manual approval (CM-3)
-|
-▼
-
+	│
+	▼
 tfsec security scan (RA-5)
-|
-▼
-
-terraform plan — DEV
-
-terraform plan — prod-west
-|
-▼
-
+	│
+	▼
+Terraform plan — DEV (environments/dev)
+Terraform plan — PROD-WEST (plan-only)
+	│
+	▼
 Plan posted as PR comment (AU-3)
-|
-▼
-
+	│
+	▼
 PR merged to main
-|
-▼
-
+	│
+	▼
 Gate 2: Manual approval before apply (CM-3)
-|
-▼
+	│
+	▼
+Terraform apply — DEV only (applies only on push/merge to main)
+	│
+	▼
+Nightly 06:00 UTC — Drift detection (CA-7)
 
-terraform apply — DEV only
-|
-▼
-
-Nightly 6am UTC: drift detection (CA-7)
-
-Exit code 2 = drift detected = pipeline fails
+Notes:
+- Drift detection uses `terraform plan -detailed-exitcode` (exit code 2 indicates drift and fails the job).
+- Applies only run after two human approvals and only for the `dev` environment to preserve safety.
 
 ## Key Features
 
