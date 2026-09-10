@@ -5,77 +5,218 @@
 ![AWS Region](https://img.shields.io/badge/region-us--east--1-orange.svg)
 ![License](https://img.shields.io/badge/license-MIT-green.svg)
 
-Production-grade AWS infrastructure for a Django application demonstrating NIST 800-53 aligned CI/CD pipelines, multi-region high availability, four golden signals observability, and zero-downtime deployments. Built as a portfolio project by a cloud infrastructure engineer with 8 years of AWS experience.
+Production-grade AWS infrastructure for a Django application demonstrating NIST 800-53 aligned CI/CD pipelines, multi-region high availability, four golden signals observability, and zero-downtime deployments. Built as a portfolio project by a cloud infrastructure engineer.
 
-Architecture (ASCII)
---------------------
+## Architecture
 
-Users → CloudFront CDN → WAF → ALB → ECS Fargate → RDS PostgreSQL / ElastiCache Redis
+Users Globally
+	│
+	▼
+┌─────────────────────┐
+│    CloudFront CDN   │
+│   (Global Edge)     │
+└──────────┬──────────┘
+	│
+	▼
+┌─────────────────────┐
+│    WAF Web ACL      │
+│  (Edge Protection)  │
+└──────────┬──────────┘
+	│
+	▼
+┌─────────────────────┐
+│        ALB          │
+│  (Load Balancer)    │
+└──────────┬──────────┘
+	│
+	▼
+┌───────────────────────────────┐
+│        ECS Fargate            │
+│   (Django + Gunicorn)         │
+└────┬──────────┬──────────┬─────┘
+     │          │          │
+     ▼          │          ▼
+┌────────────┐  │   ┌──────────────┐
+│   RDS      │  │   │ ElastiCache  │
+│ PostgreSQL │  │   │    Redis     │
+│  (Multi-AZ)│  │   │  (Sessions)  │
+└────────────┘  │   └──────────────┘
+		    │
+		    ▼
+	    ┌──────────────┐
+	    │  Observability│
+	    │ CloudWatch /  │
+	    │  SNS / Dashbds│
+	    └──────────────┘
 
-Route 53 failover → standby region (us-west-2)
+### Multi-Region HA
+
+Route 53 Health Check
+│
+├── PRIMARY: us-east-1 (dev) — 2 ECS tasks
+│      Full stack active
+│
+└── STANDBY: us-west-2 (prod-west) — 1 ECS task (plan-only)
+	 Activates on failover; RDS read replica; lighter resources using same modules
+
+## Module Structure
+
+| Module | Purpose |
+|--------|---------|
+| networking | VPC, subnets, NAT Gateway, routing, IGW |
+| alb | Application Load Balancer, target groups, listeners |
+| ecs | ECS cluster, task definition, service, IAM roles |
+| waf | WAF Web ACL, managed rule groups (OWASP, bad inputs) |
+| cdn | CloudFront distribution, origin config, cache behaviors |
+| rds | RDS PostgreSQL Multi-AZ, Secrets Manager integration |
+| redis | ElastiCache Redis, session management |
+| autoscaling | ECS target tracking, min 1 / max 10 tasks |
+| monitoring | CloudWatch dashboard, alarms, SNS notifications |
+
+## Environments
+
+| Environment | Region | Purpose | Apply | Notes |
+|-------------|--------|---------|-------|-------|
+| dev | us-east-1 | Full stack development | Yes — via pipeline | Primary active environment |
+| staging | us-east-1 | Demo only | Never applied | Shows multi-env governance |
+| prod-west | us-west-2 | Standby HA region | Plan only | Activates on us-east-1 failure |
+
+## NIST 800-53 Controls
+
+| Control | Name | Implementation |
+|---------|------|----------------|
+| CM-3 | Configuration Change Control | Two manual approval gates before plan and apply |
+| AC-6 | Least Privilege | OIDC federation — no stored AWS credentials anywhere |
+| AU-2 | Audit Events | Full GitHub Actions pipeline logging with timestamps |
+| AU-3 | Audit Record Content | Terraform plan posted as PR comment before every apply |
+| RA-5 | Vulnerability Scanning | tfsec scans Terraform code before plan runs |
+| CA-7 | Continuous Monitoring | Nightly drift detection via scheduled cron (6am UTC) |
+| CM-6 | Configuration Settings | Drift detection baseline — alerts on manual changes |
+| SC-28 | Protection at Rest | KMS encryption on RDS storage and S3 state bucket |
+
+## Four Golden Signals — CloudWatch Observability
+
+| Signal | Metric | Alarm Threshold | Evaluation Periods | Rationale |
+|--------|--------|-----------------|-------------------|-----------|
+| Latency | ALB TargetResponseTime | > 2 seconds | 2 periods | Avoids false positives during deployments |
+| Traffic | ALB RequestCount | No alarm | — | Visibility only — used for correlation |
+| Errors | ALB HTTPCode_Target_5XX | > 10 in 5 min | 3 periods | Sustained errors vs transient spikes |
+| Saturation | ECS CPUUtilization | > 80% for 10 min | 2 periods | Auto scaling triggers at 70% — 80% means scaling gap |
+
+Additional alarms:
+
+- ECS MemoryUtilization > 80%
+- RDS CPUUtilization > 70%
+- ALB HealthyHostCount < 1 (fires immediately — always critical)
+
+## Pipeline Flow
+
+PR opened
+|
+▼
+
+Gate 1: Manual approval (CM-3)
+|
+▼
+
+tfsec security scan (RA-5)
+|
+▼
+
+terraform plan — DEV
+
+terraform plan — prod-west
+|
+▼
+
+Plan posted as PR comment (AU-3)
+|
+▼
+
+PR merged to main
+|
+▼
+
+Gate 2: Manual approval before apply (CM-3)
+|
+▼
+
+terraform apply — DEV only
+|
+▼
+
+Nightly 6am UTC: drift detection (CA-7)
+
+Exit code 2 = drift detected = pipeline fails
+
+## Key Features
+
+- Zero stored AWS credentials — OIDC federation only
+- Terraform plan reviewed by humans before every apply
+- Two manual approval gates per deployment (CM-3)
+- Nightly drift detection — catches unauthorized console changes (CA-7)
+- Multi-region standby architecture — prod-west (us-west-2)
+- Four golden signals CloudWatch dashboard with tuned alarms
+- Auto scaling: min 1 task, max 10 tasks, triggers at 70% CPU
+- Zero downtime deployments: `minimum_healthy_percent = 100`
+- RDS Multi-AZ with automated backups and point-in-time recovery
+- All secrets in AWS Secrets Manager — never in code
+- WAF managed rule groups at CloudFront edge
+
+## Quick start
+
+Prerequisites
+
+- AWS CLI configured with correct account and region
+- Terraform 1.15.5
+- Git and a GitHub account
+
+Local quickstart
+
+```bash
+# Clone
+git clone https://github.com/gasper-anjanoh-dev/notesy-infrastructure.git
+cd notesy-infrastructure
+
+# Switch to environment
+cd environments/dev
+terraform init
+terraform plan
+terraform apply
+```
+
+Destroy
+
+```bash
+cd environments/dev
+terraform destroy
+```
 
 ## Cost
 
-Estimated running cost (approx): ~$2.70/day
+| Service | Daily Cost |
+|---------|-----------:|
+| NAT Gateway | ~$1.00 |
+| ALB | ~$0.60 |
+| RDS db.t3.micro | ~$0.80 |
+| ElastiCache cache.t3.micro | ~$0.50 |
+| ECS Fargate (1 task) | ~$0.05/hr |
+| **Total** | **~$2.70/day** |
 
-Rough breakdown:
+Tip: destroy when not in use. Redeploy takes approximately 15 minutes.
 
-- NAT Gateway: ~$1/day
-- ALB: ~$0.60/day
-- ECS tasks (small): ~$0.30/day (varies with CPU/memory)
-- RDS (db.t3.micro with storage): ~$0.50/day (depends on instance class)
+## Rollback Strategy
 
-Tip: destroy environments when not needed. Re-deploy typically completes within ~15 minutes.
-
-## Portfolio note
-
-This project was built to demonstrate production-grade infrastructure engineering patterns including NIST 800-53 compliance, GitOps workflows, and AWS best practices. It has been cloned by 75+ engineers in its first two weeks as a public repository.
-
-## Links
-
-- notesy-app: [github.com/gasper-anjanoh-dev/notesy-app](https://github.com/gasper-anjanoh-dev/notesy-app)
-- Author GitHub: [github.com/gasper-anjanoh-dev](https://github.com/gasper-anjanoh-dev)
-- Author LinkedIn: [Gasper Anjanoh — LinkedIn](https://www.linkedin.com/in/gasper-anjanoh-34320147/)
-
-## License
-
-MIT License
-
----
-
- 
-| rds | RDS PostgreSQL, Secrets Manager |
-| redis | ElastiCache Redis |
-| autoscaling | ECS target tracking policies |
-| monitoring | CloudWatch dashboard, alarms, SNS |
-
-Environments
-------------
-
-| Environment | Region | Purpose | Applied |
-|-------------|--------|---------|---------|
-| dev | us-east-1 | Full stack development | Yes |
-| staging | us-east-1 | Demo only, never applied | No |
-## Cost
-
-Estimated running cost (approx): ~$2.70/day
-
-Rough breakdown:
-
-- NAT Gateway: ~$1.00/day
-- ALB: ~$0.60/day
-- RDS (db.t3.micro): ~$0.80/day
-- ElastiCache (cache.t3.micro): ~$0.50/day
-- ECS Fargate (1 task): ~$0.05/hour
-- Total: ~$2.70/day when running
-
-Tip: destroy environments when not needed. Re-deploy typically completes within ~15 minutes.
+| Layer | Method | Time to Recover |
+|-------|--------|-----------------|
+| Application | Update ECS service to previous task definition revision | ~3 minutes |
+| Docker image | Force new deployment with previous git SHA tag | ~3 minutes |
+| Infrastructure | Revert Terraform commit, push to main, pipeline restores | ~15 minutes |
+| Database | RDS point-in-time restore to any point in last 7 days | ~20 minutes |
 
 ## Portfolio note
 
-This project was built to demonstrate production-grade infrastructure engineering patterns including NIST 800-53 compliance, GitOps workflows, and AWS best practices. It has been cloned by 75+ engineers in its first two weeks as a public repository.
-
-This repository has been cloned by 75+ unique engineers in its first two weeks as a public repository.
+This project was built to demonstrate production-grade infrastructure engineering patterns including NIST 800-53 compliance, GitOps workflows, multi-region high availability, and AWS best practices. The repository has been cloned by 75+ unique engineers in its first two weeks as a public repository, with particular interest in the NIST-aligned pipeline and plan-as-PR-comment pattern.
 
 ## Links
 
@@ -86,4 +227,5 @@ This repository has been cloned by 75+ unique engineers in its first two weeks a
 ## License
 
 MIT License
+
 
