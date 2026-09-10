@@ -61,6 +61,9 @@ resource "aws_db_instance" "db" {
 resource "aws_secretsmanager_secret" "db_secret" {
   name = "${var.project_name}-${var.environment}-db-credentials"
 
+  # Destroy secret immediately when requested by terraform (no recovery window)
+  recovery_window_in_days = 0
+
   tags = merge({
     Environment = var.environment
     ManagedBy   = "terraform"
