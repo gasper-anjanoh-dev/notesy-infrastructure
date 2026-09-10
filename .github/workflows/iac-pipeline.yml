@@ -16,9 +16,11 @@ on:
     branches:
       - main
     paths:
-      - 'environments/dev/**'
-      - 'environments/prod-west/**'
+      - 'environments/**'
       - 'modules/**'
+    paths-ignore:
+      - '**/*.md'
+      - 'docs/**'
   schedule:
     # CA-7: Continuous Monitoring — nightly drift detection
     # Runs terraform plan -detailed-exitcode
