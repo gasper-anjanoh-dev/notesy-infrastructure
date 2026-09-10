@@ -9,55 +9,26 @@ Production-grade AWS infrastructure for a Django application demonstrating NIST 
 
 ## Architecture
 
-Users Globally
-	│
-	▼
-┌─────────────────────┐
-│    CloudFront CDN   │
-│   (Global Edge)     │
-└──────────┬──────────┘
-	│
-	▼
-┌─────────────────────┐
-│    WAF Web ACL      │
-│  (Edge Protection)  │
-└──────────┬──────────┘
-	│
-	▼
-┌─────────────────────┐
-│        ALB          │
-│  (Load Balancer)    │
-└──────────┬──────────┘
-	│
-	▼
-┌───────────────────────────────┐
-│        ECS Fargate            │
-│   (Django + Gunicorn)         │
-└────┬──────────┬──────────┬─────┘
-     │          │          │
-     ▼          │          ▼
-┌────────────┐  │   ┌──────────────┐
-│   RDS      │  │   │ ElastiCache  │
-│ PostgreSQL │  │   │    Redis     │
-│  (Multi-AZ)│  │   │  (Sessions)  │
-└────────────┘  │   └──────────────┘
-		    │
-		    ▼
-	    ┌──────────────┐
-	    │  Observability│
-	    │ CloudWatch /  │
-	    │  SNS / Dashbds│
-	    └──────────────┘
+## Architecture
+
+```mermaid
+flowchart LR
+  Users["Users Globally"] --> CF["CloudFront CDN\n(Global Edge)"]
+  CF --> WAF["WAF Web ACL\n(Edge Protection)"]
+  WAF --> ALB["ALB\n(Application LB)"]
+  ALB --> ECS["ECS Fargate\n(Django + Gunicorn)"]
+  ECS --> RDS["RDS PostgreSQL\n(Multi-AZ)"]
+  ECS --> Redis["ElastiCache Redis\n(Sessions)"]
+  ECS --> Obs["Observability\n(CloudWatch / SNS / Dashboards)"]
+  classDef infra fill:#f8f9fa,stroke:#333,stroke-width:1px;
+  class CF,WAF,ALB,ECS,RDS,Redis,Obs infra;
+```
 
 ### Multi-Region HA
 
-Route 53 Health Check
-│
-├── PRIMARY: us-east-1 (dev) — 2 ECS tasks
-│      Full stack active
-│
-└── STANDBY: us-west-2 (prod-west) — 1 ECS task (plan-only)
-	 Activates on failover; RDS read replica; lighter resources using same modules
+Route 53 health checks route traffic to the PRIMARY region (us-east-1) by default.
+- PRIMARY: us-east-1 (dev) — full stack active (ECS tasks, ALB, RDS Multi-AZ)
+- STANDBY: us-west-2 (prod-west) — plan-only standby; lighter footprint, RDS read replica; activates on failover
 
 ## Module Structure
 
@@ -109,45 +80,28 @@ Additional alarms:
 - RDS CPUUtilization > 70%
 - ALB HealthyHostCount < 1 (fires immediately — always critical)
 
+
 ## Pipeline Flow
 
-PR opened
-|
-▼
+```mermaid
+flowchart TB
+	subgraph PR [Pull Request]
+		PR_open["PR opened"]
+		PR_open --> Approval1["Gate 1: Manual approval (CM-3)"]
+		Approval1 --> Tfsec["tfsec security scan (RA-5)"]
+		Tfsec --> PlanDev["Terraform plan — DEV"]
+		Tfsec --> PlanProd["Terraform plan — PROD-WEST (plan-only)"]
+		PlanDev --> PostPlan["Plan posted as PR comment (AU-3)"]
+	end
+	PostPlan --> Merge["PR merged to main"]
+	Merge --> Approval2["Gate 2: Manual approval before apply (CM-3)"]
+	Approval2 --> ApplyDev["Terraform apply — DEV only"]
+	ApplyDev --> Drift["Nightly 06:00 UTC — Drift detection (CA-7)"]
+```
 
-Gate 1: Manual approval (CM-3)
-|
-▼
-
-tfsec security scan (RA-5)
-|
-▼
-
-terraform plan — DEV
-
-terraform plan — prod-west
-|
-▼
-
-Plan posted as PR comment (AU-3)
-|
-▼
-
-PR merged to main
-|
-▼
-
-Gate 2: Manual approval before apply (CM-3)
-|
-▼
-
-terraform apply — DEV only
-|
-▼
-
-Nightly 6am UTC: drift detection (CA-7)
-
-Exit code 2 = drift detected = pipeline fails
+Notes:
+- Drift detection uses `terraform plan -detailed-exitcode` (exit code 2 indicates drift and fails the job).
+- Applies only run after two human approvals and only for the `dev` environment to preserve safety.
 
 ## Key Features
 
