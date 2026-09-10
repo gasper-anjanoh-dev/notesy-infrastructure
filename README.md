@@ -81,7 +81,7 @@ This repository has been cloned by 75+ unique engineers in its first two weeks a
 
 - notesy-app: https://github.com/gasper-anjanoh-dev/notesy-app
 - Author GitHub: https://github.com/gasper-anjanoh-dev
-- Author LinkedIn: https://linkedin.com/in/gasper-anjanoh
+- Author LinkedIn: https://www.linkedin.com/in/gasper-anjanoh-34320147/
 
 ## License
 
