@@ -9,8 +9,6 @@ Production-grade AWS infrastructure for a Django application demonstrating NIST 
 
 ## Architecture
 
-## Architecture
-
 ```mermaid
 flowchart LR
   Users["Users Globally"] --> CF["CloudFront CDN\n(Global Edge)"]
