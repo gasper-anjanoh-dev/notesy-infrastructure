@@ -11,45 +11,48 @@ Production-grade AWS infrastructure for a Django application demonstrating NIST 
 
 ## Architecture
 
+```text
 Users Globally
-	  │
-	  ▼
+	│
+	▼
   ┌─────────────────────┐
   │   CloudFront CDN     │
   │    (Global Edge)     │
   └──────────┬───────────┘
-		   │
-		   ▼
+	      │
+	      ▼
   ┌─────────────────────┐
   │     WAF Web ACL      │
   │   (Edge Protection)  │
   └──────────┬───────────┘
-		   │
-		   ▼
+	      │
+	      ▼
   ┌─────────────────────┐
   │         ALB          │
   │   (Application LB)   │
   └──────────┬───────────┘
-		   │
-		   ▼
+	      │
+	      ▼
   ┌──────────────────────────────────────┐
   │             ECS Fargate              │
   │         (Django + Gunicorn)          │
   └──────┬───────────┬──────────┬────────┘
-	    │           │          │
-	    │           │          │
-	    ▼           │          ▼
+	  │           │          │
+	  │           │          │
+	  ▼           │          ▼
   ┌────────────┐     │    ┌──────────────┐
   │   RDS      │     │    │  ElastiCache │
   │ PostgreSQL │     │    │     Redis    │
   │  (Multi-AZ)│     │    │   (Sessions)  │
   └────────────┘     │    └──────────────┘
-				 ▼
-			┌──────────────┐
-			│ Observability│
-			│ CloudWatch / │
-			│ SNS / Dashbds│
-			└──────────────┘
+			▼
+		 ┌──────────────┐
+		 │ Observability│
+		 │ CloudWatch / │
+		 │ SNS / Dashbds│
+		 └──────────────┘
+
+``` 
 
 ### Multi-Region HA
 
@@ -110,6 +113,7 @@ Additional alarms:
 
 ## Pipeline Flow
 
+```text
 PR opened
 	│
 	▼
@@ -136,6 +140,8 @@ Terraform apply — DEV only (applies only on push/merge to main)
 	│
 	▼
 Nightly 06:00 UTC — Drift detection (CA-7)
+
+``` 
 
 Notes:
 - Drift detection uses `terraform plan -detailed-exitcode` (exit code 2 indicates drift and fails the job).
