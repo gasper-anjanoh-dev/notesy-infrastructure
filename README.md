@@ -43,7 +43,7 @@ MIT License
 
 ---
 
-If you want this README tailored with your real LinkedIn URL, cost estimates adjusted for chosen instance sizes, or embedded diagrams (SVG/PNG), tell me which details to adjust and I will update it.
+ 
 | rds | RDS PostgreSQL, Secrets Manager |
 | redis | ElastiCache Redis |
 | autoscaling | ECS target tracking policies |
