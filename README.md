@@ -20,7 +20,7 @@ flowchart LR
   ECS --> RDS["RDS PostgreSQL\n(Multi-AZ)"]
   ECS --> Redis["ElastiCache Redis\n(Sessions)"]
   ECS --> Obs["Observability\n(CloudWatch / SNS / Dashboards)"]
-	classDef infra fill:#f8f9fa,stroke:#333,stroke-width:1px,color:#000;
+	classDef infra fill:#2b303b,stroke:#111,stroke-width:1px,color:#fff;
   class CF,WAF,ALB,ECS,RDS,Redis,Obs infra;
 ```
 
