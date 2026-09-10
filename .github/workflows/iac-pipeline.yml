@@ -16,8 +16,7 @@ on:
     branches:
       - main
     paths:
-      - 'environments/dev/**'
-      - 'environments/prod-west/**'
+      - 'environments/**'
       - 'modules/**'
   schedule:
     # CA-7: Continuous Monitoring — nightly drift detection
