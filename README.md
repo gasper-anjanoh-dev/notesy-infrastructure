@@ -11,48 +11,18 @@ Production-grade AWS infrastructure for a Django application demonstrating NIST 
 
 ## Architecture
 
-```text
-Users Globally
-	│
-	▼
-  ┌─────────────────────┐
-  │   CloudFront CDN     │
-  │    (Global Edge)     │
-  └──────────┬───────────┘
-	      │
-	      ▼
-  ┌─────────────────────┐
-  │     WAF Web ACL      │
-  │   (Edge Protection)  │
-  └──────────┬───────────┘
-	      │
-	      ▼
-  ┌─────────────────────┐
-  │         ALB          │
-  │   (Application LB)   │
-  └──────────┬───────────┘
-	      │
-	      ▼
-  ┌──────────────────────────────────────┐
-  │             ECS Fargate              │
-  │         (Django + Gunicorn)          │
-  └──────┬───────────┬──────────┬────────┘
-	  │           │          │
-	  │           │          │
-	  ▼           │          ▼
-  ┌────────────┐     │    ┌──────────────┐
-  │   RDS      │     │    │  ElastiCache │
-  │ PostgreSQL │     │    │     Redis    │
-  │  (Multi-AZ)│     │    │   (Sessions)  │
-  └────────────┘     │    └──────────────┘
-			▼
-		 ┌──────────────┐
-		 │ Observability│
-		 │ CloudWatch / │
-		 │ SNS / Dashbds│
-		 └──────────────┘
-
-``` 
+```mermaid
+flowchart LR
+  Users["Users Globally"] --> CF["CloudFront CDN\n(Global Edge)"]
+  CF --> WAF["WAF Web ACL\n(Edge Protection)"]
+  WAF --> ALB["ALB\n(Application LB)"]
+  ALB --> ECS["ECS Fargate\n(Django + Gunicorn)"]
+  ECS --> RDS["RDS PostgreSQL\n(Multi-AZ)"]
+  ECS --> Redis["ElastiCache Redis\n(Sessions)"]
+  ECS --> Obs["Observability\n(CloudWatch / SNS / Dashboards)"]
+  classDef infra fill:#f8f9fa,stroke:#333,stroke-width:1px;
+  class CF,WAF,ALB,ECS,RDS,Redis,Obs infra;
+```
 
 ### Multi-Region HA
 
@@ -113,35 +83,21 @@ Additional alarms:
 
 ## Pipeline Flow
 
-```text
-PR opened
-	│
-	▼
-Gate 1: Manual approval (CM-3)
-	│
-	▼
-tfsec security scan (RA-5)
-	│
-	▼
-Terraform plan — DEV (environments/dev)
-Terraform plan — PROD-WEST (plan-only)
-	│
-	▼
-Plan posted as PR comment (AU-3)
-	│
-	▼
-PR merged to main
-	│
-	▼
-Gate 2: Manual approval before apply (CM-3)
-	│
-	▼
-Terraform apply — DEV only (applies only on push/merge to main)
-	│
-	▼
-Nightly 06:00 UTC — Drift detection (CA-7)
-
-``` 
+```mermaid
+flowchart TB
+	subgraph PR [Pull Request]
+		PR_open["PR opened"]
+		PR_open --> Approval1["Gate 1: Manual approval (CM-3)"]
+		Approval1 --> Tfsec["tfsec security scan (RA-5)"]
+		Tfsec --> PlanDev["Terraform plan — DEV"]
+		Tfsec --> PlanProd["Terraform plan — PROD-WEST (plan-only)"]
+		PlanDev --> PostPlan["Plan posted as PR comment (AU-3)"]
+	end
+	PostPlan --> Merge["PR merged to main"]
+	Merge --> Approval2["Gate 2: Manual approval before apply (CM-3)"]
+	Approval2 --> ApplyDev["Terraform apply — DEV only"]
+	ApplyDev --> Drift["Nightly 06:00 UTC — Drift detection (CA-7)"]
+```
 
 Notes:
 - Drift detection uses `terraform plan -detailed-exitcode` (exit code 2 indicates drift and fails the job).
