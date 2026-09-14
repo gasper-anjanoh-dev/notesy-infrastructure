@@ -49,6 +49,7 @@ jobs:
 
   request-approval:
     name: Request Approval
+    if: github.event_name != 'schedule'
     runs-on: ubuntu-latest
     environment: plan-approval
     steps:
@@ -304,3 +305,11 @@ jobs:
           fi
       - name: Detect Drift CA-7
         run: terraform plan -detailed-exitcode
+
+      - name: Output Plan to Job Summary (schedule only)
+        if: github.event_name == 'schedule'
+        run: |
+          echo "## Drift Detection Plan Output" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          cat plan-drift.txt >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
