@@ -18,6 +18,8 @@ on:
     paths:
       - 'environments/**'
       - 'modules/**'
+      - '!**.md'
+      - '!docs/**'
   schedule:
     # CA-7: Continuous Monitoring — nightly drift detection
     # Runs terraform plan -detailed-exitcode
