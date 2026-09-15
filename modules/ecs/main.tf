@@ -63,9 +63,10 @@ resource "aws_iam_role_policy" "ecs_task_execution_secrets" {
       {
         Effect = "Allow"
         Action = [
-          "secretsmanager:GetSecretValue"
+          "secretsmanager:GetSecretValue",
+          "secretsmanager:DescribeSecret"
         ]
-        Resource = compact([var.db_secret_arn, var.redis_secret_arn, var.django_secret_arn])
+        Resource = "arn:aws:secretsmanager:*:*:secret:*"
       },
       {
         Effect = "Allow"
