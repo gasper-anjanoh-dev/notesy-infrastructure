@@ -13,8 +13,8 @@
         },
         "StringLike": {
           "token.actions.githubusercontent.com:sub": [
-            "repo:gasper-anjanoh-dev/notesy-infrastructure:ref:refs/heads/main",
-            "repo:gasper-anjanoh-dev/notesy-app:ref:refs/heads/main"
+            "repo:gasper-anjanoh-dev@*/notesy-infrastructure@*:ref:refs/heads/main",
+            "repo:gasper-anjanoh-dev@*/notesy-app@*:ref:refs/heads/main"
           ]
         }
       }
