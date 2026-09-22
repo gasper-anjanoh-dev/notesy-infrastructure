@@ -101,6 +101,23 @@ Notes:
 - Drift detection uses `terraform plan -detailed-exitcode` (exit code 2 indicates drift and fails the job).
 - Applies only run after two human approvals and only for the `dev` environment to preserve safety.
 
+## Feature Flag Demo Deployment
+
+The ECS task definition accepts a configurable `container_image` URI so the
+application can deploy an immutable GHCR image tag such as
+`ghcr.io/gasper-anjanoh-dev/notesy-app:<git-sha>`. The application CI also
+publishes `:latest` for convenience.
+
+The dark mode banner reads the SSM parameter
+`/notesy/dev/features/dark-mode-banner`. The ECS task role has
+`ssm:GetParameter` and `ssm:GetParameters` access to the `/notesy/*` parameter
+path. The application CI creates the demo parameter with a default value of
+`false` when it does not already exist.
+
+Use `false`, `true`, or a percentage such as `25%` as the parameter value to
+control the rollout. Updating the parameter changes the banner behavior after
+the application's 60-second feature-flag cache expires.
+
 ## Key Features
 
 - Zero stored AWS credentials — OIDC federation only

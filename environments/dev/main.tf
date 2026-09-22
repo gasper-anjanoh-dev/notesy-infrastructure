@@ -59,7 +59,7 @@ module "ecs" {
   alb_security_group_id = module.alb.alb_security_group_id
   target_group_arn      = module.alb.target_group_arn
   alb_listener_arn      = module.alb.alb_listener_arn
-  app_image             = var.app_image
+  container_image       = var.app_image
   db_secret_arn         = module.rds.db_secret_arn
   redis_secret_arn      = module.redis.redis_secret_arn
   cloudfront_domain     = module.cdn.cloudfront_domain_name
