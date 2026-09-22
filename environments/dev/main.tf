@@ -1,4 +1,4 @@
-// Pipeline smoke test: harmless comment-only change for the dev flow.
+// Pipeline apply trigger: harmless comment-only change for the dev flow.
 module "networking" {
   source       = "../../modules/networking"
   project_name = "notesy"
