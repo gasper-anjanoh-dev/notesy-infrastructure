@@ -27,7 +27,7 @@ module "ecs" {
   private_subnet_ids    = module.networking.private_subnet_ids
   alb_security_group_id = module.alb.alb_security_group_id
   target_group_arn      = module.alb.target_group_arn
-  app_image             = var.app_image
+  container_image       = var.app_image
 }
 
 module "cdn" {

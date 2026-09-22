@@ -19,6 +19,13 @@
         "iam:GetRolePolicy"
       ],
       "Resource": "arn:aws:iam::797855613035:role/notesy-*"
+    },
+    {
+      "Effect": "Allow",
+      "Action": [
+        "ssm:PutParameter"
+      ],
+      "Resource": "arn:aws:ssm:us-east-1:797855613035:parameter/notesy/dev/features/*"
     }
   ]
 }

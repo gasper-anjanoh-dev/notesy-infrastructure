@@ -52,6 +52,43 @@ resource "aws_iam_role_policy_attachment" "ecs_task_execution" {
   policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy"
 }
 
+resource "aws_iam_role" "ecs_task" {
+  name = "${var.project_name}-${var.environment}-ecs-task-role"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Action = "sts:AssumeRole"
+      Effect = "Allow"
+      Principal = {
+        Service = "ecs-tasks.amazonaws.com"
+      }
+    }]
+  })
+
+  tags = {
+    Environment = var.environment
+    ManagedBy   = "terraform"
+  }
+}
+
+resource "aws_iam_role_policy" "ecs_task_ssm" {
+  name = "${var.project_name}-${var.environment}-ecs-task-ssm"
+  role = aws_iam_role.ecs_task.name
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Effect = "Allow"
+      Action = [
+        "ssm:GetParameter",
+        "ssm:GetParameters"
+      ]
+      Resource = "arn:aws:ssm:*:*:parameter/notesy/*"
+    }]
+  })
+}
+
 # Inline policy to allow ECS task execution role to read Secrets Manager secrets
 resource "aws_iam_role_policy" "ecs_task_execution_secrets" {
   name = "${var.project_name}-${var.environment}-ecs-exec-secrets"
@@ -125,10 +162,11 @@ resource "aws_ecs_task_definition" "app" {
   cpu                      = var.cpu
   memory                   = var.memory
   execution_role_arn       = aws_iam_role.ecs_task_execution.arn
+  task_role_arn            = aws_iam_role.ecs_task.arn
 
   container_definitions = jsonencode([{
     name  = var.project_name
-    image = var.app_image
+    image = var.container_image
     portMappings = [{
       containerPort = var.app_port
       protocol      = "tcp"

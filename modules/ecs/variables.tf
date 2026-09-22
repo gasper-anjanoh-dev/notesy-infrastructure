@@ -22,8 +22,8 @@ variable "target_group_arn" {
   type = string
 }
 
-variable "app_image" {
-  description = "Docker image for the application"
+variable "container_image" {
+  description = "Full container image URI including tag"
   type        = string
 }
 
