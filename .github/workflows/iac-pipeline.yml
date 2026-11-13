@@ -20,11 +20,11 @@ on:
       - 'modules/**'
       - '!**.md'
       - '!docs/**'
-  schedule:
+  #schedule:
     # CA-7: Continuous Monitoring — nightly drift detection
     # Runs terraform plan -detailed-exitcode
     # Notifies team that someone made manual AWS console changes
-    - cron: '0 6 * * *'
+   # - cron: '0 6 * * *'
   # Allow manual runs from the Actions UI
   workflow_dispatch: {}
 
